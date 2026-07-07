@@ -1,7 +1,5 @@
 """Pydantic models and TypedDicts for the LangGraph agent state."""
-
 from typing import Any, TypedDict
-
 
 class AgentState(TypedDict, total=False):
     """The state object passed between LangGraph nodes.

@@ -12,6 +12,7 @@ This builds a 3-node LangGraph:
 import asyncio
 import os
 import sys
+from collections.abc import Callable, Coroutine
 from typing import Any
 
 from dotenv import load_dotenv
@@ -27,9 +28,9 @@ from tool_calling_concepts.nodes.tool_executor import tool_executor_node
 # Load environment variables from project root .env
 # ──────────────────────────────────────────────
 
-# Walk up from this file's directory to find the .env
+# Walk up from this file's directory to find the .env at project root
 _current_dir = os.path.dirname(os.path.abspath(__file__))
-_project_root = os.path.abspath(os.path.join(_current_dir, ".."))
+_project_root = os.path.abspath(os.path.join(_current_dir, "..", ".."))
 _dotenv_path = os.path.join(_project_root, ".env")
 load_dotenv(_dotenv_path)
 
@@ -110,11 +111,18 @@ def build_agent_graph() -> StateGraph:
 # ──────────────────────────────────────────────
 
 
-async def run_agent(query: str) -> dict[str, Any]:
+async def run_agent(
+    query: str,
+    intercept_callback: Callable[[dict[str, Any]], Coroutine[Any, Any, None]] | None = None,
+) -> dict[str, Any]:
     """Run the agent graph with a user query.
 
     Args:
         query: The natural-language query to process.
+        intercept_callback: Optional async callback invoked after tool execution
+            with the intermediate state (containing tool_results). The callback
+            receives the state dict and can inspect/modify it before the graph
+            continues to response formatting.
 
     Returns:
         The final state dict with keys: query, messages, response, error, etc.
@@ -134,8 +142,21 @@ async def run_agent(query: str) -> dict[str, Any]:
         "error": None,
     }
 
-    result: AgentState = await compiled.ainvoke(initial_state)
-    return dict(result)
+    if intercept_callback:
+        # Run step-by-step so we can intercept after tool execution.
+        # stream_mode="values" yields the full state at each step.
+        final_state: AgentState = initial_state
+        async for step in compiled.astream(initial_state, stream_mode="values"):
+            final_state = step
+            # After tool_executor node runs, its output is stored under the key
+            # of the node name in the state. We detect this by checking for
+            # tool_results in the state (which tool_executor populates).
+            if step.get("tool_results"):
+                await intercept_callback(dict(step))
+        return dict(final_state)
+    else:
+        result: AgentState = await compiled.ainvoke(initial_state)
+        return dict(result)
 
 
 # ──────────────────────────────────────────────

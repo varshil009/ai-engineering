@@ -17,17 +17,19 @@ from tool_calling_concepts.services.groq_client import GroqClient
 def _build_system_prompt() -> str:
     """Construct the system prompt with full table schema context."""
     schema_blocks: list[str] = []
+    # creates a list of strings, each representing a table and its columns, to be included in the system prompt
     for table_name, columns in TABLE_SCHEMAS.items():
         col_lines = "\n".join(
             f"  - {col['column']} ({col['type']}): {col['description']}"
             for col in columns
         )
+        #print(f"llm_inference._build_system_prompt: table {table_name} columns:\n{col_lines}")
         schema_blocks.append(f"### Table: {table_name}\n{col_lines}")
 
     schemas_text = "\n\n".join(schema_blocks)
-
+    #print(f"llm_inference._build_system_prompt.schemas_text:\n{schemas_text}")
     return (
-        "You are a power-grid data analyst assistant. You have access to a Supabase PostgreSQL "
+        "You are an agent, You have access to a Supabase PostgreSQL, you have to return the table that was returned from tool call. "
         "database containing transformer and prediction data.\n\n"
         "## Database Schema\n\n"
         f"{schemas_text}\n\n"
@@ -41,6 +43,12 @@ def _build_system_prompt() -> str:
         "7. Keep responses concise but informative. Include the SQL you ran when relevant.\n"
         "8. The SGT tables (SGT1-SGT4) contain prediction data — use `predicted_for_utc` for the prediction target time.\n"
         "9. BOLNEY contains actual active power readings.\n"
+        "10. You have to show all the data returned as markdown tables in your response. If the data is too large, show the first 10 rows and indicate that there are more rows.\n"
+        "⚠️⚠️⚠️ MOST IMPORTANT ⚠️⚠️⚠️\n"
+        "11. If the user asks for a table that does not exist, inform them that the table does not exist and do not attempt to call the tool."
+        "⚠️⚠️⚠️ ANOTHER MOST IMPORTANT ⚠️⚠️⚠️\n"
+        "GENERATE A MARKDOWN TABLE FROM THE DATA RETURNED FROM THE TOOL CALL. WITHOUT ADDING DATA FROM YOUR SIDE"
+        
     )
 
 

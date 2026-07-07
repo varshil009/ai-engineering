@@ -14,6 +14,7 @@ class GroqClient:
         self._client = AsyncGroq(api_key=settings.groq_api_key)
         self._model: str = settings.groq_model
 
+
     async def chat_completion(
         self,
         messages: list[dict[str, Any]],
@@ -40,11 +41,12 @@ class GroqClient:
             "temperature": temperature,
             "max_tokens": max_tokens,
         }
+        #print(kwargs)
         if tools:
             kwargs["tools"] = tools
             kwargs["tool_choice"] = tool_choice
 
         response = await self._client.chat.completions.create(**kwargs)
-
+        print(response)
         # Convert to a plain dict for easy serialisation
         return response.model_dump(mode="json")

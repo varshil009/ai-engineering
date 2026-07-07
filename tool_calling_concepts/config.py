@@ -1,14 +1,15 @@
 """Application configuration loaded from environment variables."""
 
 import os
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Final
 
 
 # ──────────────────────────────────────────────
 # Table schema metadata — used in system prompt
 # ──────────────────────────────────────────────
-
+#  variable name              type hint                         values
+#    |                           |                               |
 TABLE_SCHEMAS: Final[dict[str, list[dict[str, str]]]] = {
     "BOLNEY": [
         {"column": "ID", "type": "bigint", "description": "Primary key"},
@@ -89,7 +90,9 @@ TABLE_SCHEMAS: Final[dict[str, list[dict[str, str]]]] = {
 
 @dataclass(frozen=True)
 class Settings:
-    """Immutable application settings loaded from environment."""
+    """Immutable application settings loaded from environment.
+       frozen = True means the dataclass is immutable after creation.
+    """
 
     groq_api_key: str = ""
     groq_model: str = "llama-3.3-70b-versatile"
@@ -124,3 +127,5 @@ class Settings:
 
 # Module-level singleton — loaded once on import
 settings: Settings = Settings.from_env()
+#  |          |              |
+# var     typehint     object creation
