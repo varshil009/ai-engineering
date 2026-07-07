@@ -1,0 +1,414 @@
+{
+  "test_timestamp": "2026-07-07T18:13:11.391005+00:00",
+  "summary": {
+    "total_tests": 20,
+    "completed": 20,
+    "errors": 0,
+    "average_query_match_score": 0.978,
+    "average_result_match_score": 0.9,
+    "average_overall_score": 0.6895,
+    "categorization": {
+      "excellent (>=0.90)": 9,
+      "good (0.75-0.89)": 0,
+      "moderate (0.50-0.74)": 5,
+      "poor (<0.50)": 6
+    }
+  },
+  "results": [
+    {
+      "id": 1,
+      "prompt": "Show me all records from BOLNEY where the SGT is 'SGT1'.",
+      "expected_sql": "SELECT * FROM BOLNEY WHERE SGT = 'SGT1'",
+      "description": "Simple SELECT with WHERE equality filter on a text column",
+      "elapsed_seconds": 3.55,
+      "llm_generated_sql": "SELECT * FROM BOLNEY WHERE SGT = 'SGT1'",
+      "tool_error": "Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01knhwq8hmemwth6yp0k7c3xjk` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 48756, Requested 60329. Please try again in 2h10m49.44s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}",
+      "query_match_score": {
+        "score": 1.0,
+        "expected_normalised": "select * from bolney where sgt ='sgt1'",
+        "actual_normalised": "select * from bolney where sgt ='sgt1'",
+        "details": "Excellent match — queries are structurally identical or near-identical."
+      },
+      "result_match_score": {
+        "score": 1.0,
+        "expected_row_count": 1000,
+        "actual_row_count": 1000,
+        "matching_rows": 1000,
+        "details": "Excellent match — result sets are identical or nearly identical."
+      },
+      "overall_score": 1.0
+    },
+    {
+      "id": 2,
+      "prompt": "Get all SGT1 predictions where the actual value is greater than 100 and the absolute percentage error is less than 5.",
+      "expected_sql": "SELECT * FROM SGT1 WHERE actual > 100 AND absolute_percentage_error < 5",
+      "description": "Multiple WHERE conditions with AND, numeric comparisons",
+      "elapsed_seconds": 2.59,
+      "llm_generated_sql": "SELECT * FROM SGT1 WHERE actual > 100 AND absolute_percentage_error < 5;",
+      "tool_error": "Error code: 400 - {'error': {'message': 'Please reduce the length of the messages or completion.', 'type': 'invalid_request_error', 'param': 'messages', 'code': 'context_length_exceeded'}}",
+      "query_match_score": {
+        "score": 1.0,
+        "expected_normalised": "select * from sgt1 where actual > 100 and absolute_percentage_error < 5",
+        "actual_normalised": "select * from sgt1 where actual > 100 and absolute_percentage_error < 5",
+        "details": "Excellent match — queries are structurally identical or near-identical."
+      },
+      "result_match_score": {
+        "score": 1.0,
+        "expected_row_count": 707,
+        "actual_row_count": 707,
+        "matching_rows": 707,
+        "details": "Excellent match — result sets are identical or nearly identical."
+      },
+      "overall_score": 1.0
+    },
+    {
+      "id": 3,
+      "prompt": "How many records are there in the BOLNEY table?",
+      "expected_sql": "SELECT COUNT(*) FROM BOLNEY",
+      "description": "Simple COUNT aggregation without filter",
+      "elapsed_seconds": 19.59,
+      "llm_generated_sql": "SELECT COUNT(*) FROM BOLNEY;",
+      "tool_error": "SQL execution failed: GET https://gipaqowldpoiimclnjwa.supabase.co/rest/v1/BOLNEY failed with 400: {\"code\":\"PGRST200\",\"details\":\"Searched for a foreign key relationship between 'BOLNEY' and 'COUNT' in the schema 'public', but no matches were found.\",\"hint\":null,\"message\":\"Could not find a relationship between 'BOLNEY' and 'COUNT' in the schema cache\"}",
+      "query_match_score": {
+        "score": 1.0,
+        "expected_normalised": "select count ( * ) from bolney",
+        "actual_normalised": "select count ( * ) from bolney",
+        "details": "Excellent match — queries are structurally identical or near-identical."
+      },
+      "result_match_score": null,
+      "overall_score": 0.5
+    },
+    {
+      "id": 4,
+      "prompt": "Show me the top 5 most recent records from the BOLNEY table based on the Date column.",
+      "expected_sql": "SELECT * FROM BOLNEY ORDER BY Date DESC LIMIT 5",
+      "description": "ORDER BY DESC with LIMIT for sorting",
+      "elapsed_seconds": 8.38,
+      "llm_generated_sql": "SELECT * FROM BOLNEY ORDER BY Date DESC LIMIT 5;",
+      "tool_error": null,
+      "query_match_score": {
+        "score": 1.0,
+        "expected_normalised": "select * from bolney order by date desc limit 5",
+        "actual_normalised": "select * from bolney order by date desc limit 5",
+        "details": "Excellent match — queries are structurally identical or near-identical."
+      },
+      "result_match_score": {
+        "score": 1.0,
+        "expected_row_count": 5,
+        "actual_row_count": 5,
+        "matching_rows": 5,
+        "details": "Excellent match — result sets are identical or nearly identical."
+      },
+      "overall_score": 1.0
+    },
+    {
+      "id": 5,
+      "prompt": "Get the predicted_for_utc and predicted values from SGT2 where the forecast_horizon_minutes is 60.",
+      "expected_sql": "SELECT predicted_for_utc, predicted FROM SGT2 WHERE forecast_horizon_minutes = 60",
+      "description": "Specific column selection with WHERE on numeric column",
+      "elapsed_seconds": 2.53,
+      "llm_generated_sql": "SELECT predicted_for_utc, predicted FROM SGT2 WHERE forecast_horizon_minutes = 60;",
+      "tool_error": null,
+      "query_match_score": {
+        "score": 1.0,
+        "expected_normalised": "select predicted_for_utc, predicted from sgt2 where forecast_horizon_minutes = 60",
+        "actual_normalised": "select predicted_for_utc, predicted from sgt2 where forecast_horizon_minutes = 60",
+        "details": "Excellent match — queries are structurally identical or near-identical."
+      },
+      "result_match_score": null,
+      "overall_score": 0.5
+    },
+    {
+      "id": 6,
+      "prompt": "How many records exist for each SGT in the BOLNEY table?",
+      "expected_sql": "SELECT SGT, COUNT(*) FROM BOLNEY GROUP BY SGT",
+      "description": "GROUP BY with COUNT aggregation",
+      "elapsed_seconds": 17.27,
+      "llm_generated_sql": "SELECT SGT, COUNT(*) as count FROM BOLNEY GROUP BY SGT;",
+      "tool_error": "SQL execution failed: GET https://gipaqowldpoiimclnjwa.supabase.co/rest/v1/BOLNEY failed with 400: {\"code\":\"PGRST100\",\"details\":\"unexpected \\\"a\\\" expecting \\\",\\\"\",\"hint\":null,\"message\":\"\\\"failed to parse select parameter (SGT,COUNT(*) as count)\\\" (line 1, column 14)\"}",
+      "query_match_score": {
+        "score": 0.95,
+        "expected_normalised": "select sgt, count ( * ) from bolney group by sgt",
+        "actual_normalised": "select sgt, count ( * ) as count from bolney group by sgt",
+        "details": "Excellent match — queries are structurally identical or near-identical."
+      },
+      "result_match_score": null,
+      "overall_score": 0.475
+    },
+    {
+      "id": 7,
+      "prompt": "What is the average ActivePower_Avg for each SGT in the BOLNEY table?",
+      "expected_sql": "SELECT SGT, AVG(ActivePower_Avg) FROM BOLNEY GROUP BY SGT",
+      "description": "GROUP BY with AVG aggregation",
+      "elapsed_seconds": 1.87,
+      "llm_generated_sql": "SELECT SGT, AVG(ActivePower_Avg) as average_active_power FROM BOLNEY GROUP BY SGT;",
+      "tool_error": "SQL execution failed: GET https://gipaqowldpoiimclnjwa.supabase.co/rest/v1/BOLNEY failed with 400: {\"code\":\"PGRST100\",\"details\":\"unexpected \\\"a\\\" expecting \\\",\\\"\",\"hint\":null,\"message\":\"\\\"failed to parse select parameter (SGT,AVG(ActivePower_Avg) as average_active_power)\\\" (line 1, column 26)\"}",
+      "query_match_score": {
+        "score": 0.95,
+        "expected_normalised": "select sgt, avg ( activepower_avg ) from bolney group by sgt",
+        "actual_normalised": "select sgt, avg ( activepower_avg ) as average_active_power from bolney group by sgt",
+        "details": "Excellent match — queries are structurally identical or near-identical."
+      },
+      "result_match_score": null,
+      "overall_score": 0.475
+    },
+    {
+      "id": 8,
+      "prompt": "What is the total sum of actual values for each prediction_index in SGT1?",
+      "expected_sql": "SELECT prediction_index, SUM(actual) FROM SGT1 GROUP BY prediction_index",
+      "description": "GROUP BY with SUM aggregation",
+      "elapsed_seconds": 2.02,
+      "llm_generated_sql": "SELECT prediction_index, SUM(actual) FROM SGT1 GROUP BY prediction_index;",
+      "tool_error": "SQL execution failed: GET https://gipaqowldpoiimclnjwa.supabase.co/rest/v1/SGT1 failed with 400: {\"code\":\"PGRST200\",\"details\":\"Searched for a foreign key relationship between 'SGT1' and 'SUM' in the schema 'public', but no matches were found.\",\"hint\":null,\"message\":\"Could not find a relationship between 'SGT1' and 'SUM' in the schema cache\"}",
+      "query_match_score": {
+        "score": 1.0,
+        "expected_normalised": "select prediction_index, sum ( actual ) from sgt1 group by prediction_index",
+        "actual_normalised": "select prediction_index, sum ( actual ) from sgt1 group by prediction_index",
+        "details": "Excellent match — queries are structurally identical or near-identical."
+      },
+      "result_match_score": null,
+      "overall_score": 0.5
+    },
+    {
+      "id": 9,
+      "prompt": "What are the minimum and maximum actual values in the SGT3 table?",
+      "expected_sql": "SELECT MIN(actual), MAX(actual) FROM SGT3",
+      "description": "MIN and MAX aggregation functions",
+      "elapsed_seconds": 1.93,
+      "llm_generated_sql": "SELECT MIN(actual) AS min_actual, MAX(actual) AS max_actual FROM SGT3;",
+      "tool_error": "SQL execution failed: GET https://gipaqowldpoiimclnjwa.supabase.co/rest/v1/SGT3 failed with 400: {\"code\":\"PGRST100\",\"details\":\"unexpected \\\"A\\\" expecting \\\",\\\"\",\"hint\":null,\"message\":\"\\\"failed to parse select parameter (MIN(actual) AS min_actual,MAX(actual) AS max_actual)\\\" (line 1, column 13)\"}",
+      "query_match_score": {
+        "score": 0.8639,
+        "expected_normalised": "select min ( actual ) , max ( actual ) from sgt3",
+        "actual_normalised": "select min ( actual ) as min_actual, max ( actual ) as max_actual from sgt3",
+        "details": "Good match — minor differences in column order, aliasing, or formatting."
+      },
+      "result_match_score": null,
+      "overall_score": 0.432
+    },
+    {
+      "id": 10,
+      "prompt": "Find all BOLNEY records where ActivePower_Avg is between 50 and 200.",
+      "expected_sql": "SELECT * FROM BOLNEY WHERE ActivePower_Avg BETWEEN 50 AND 200",
+      "description": "WHERE with BETWEEN range filter",
+      "elapsed_seconds": 24.99,
+      "llm_generated_sql": "SELECT * FROM BOLNEY WHERE ActivePower_Avg BETWEEN 50 AND 200;",
+      "tool_error": "Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01knhwq8hmemwth6yp0k7c3xjk` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 73671, Requested 60314. Please try again in 8h9m23.039999999s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}",
+      "query_match_score": {
+        "score": 1.0,
+        "expected_normalised": "select * from bolney where activepower_avg between 50 and 200",
+        "actual_normalised": "select * from bolney where activepower_avg between 50 and 200",
+        "details": "Excellent match — queries are structurally identical or near-identical."
+      },
+      "result_match_score": {
+        "score": 1.0,
+        "expected_row_count": 1000,
+        "actual_row_count": 1000,
+        "matching_rows": 1000,
+        "details": "Excellent match — result sets are identical or nearly identical."
+      },
+      "overall_score": 1.0
+    },
+    {
+      "id": 11,
+      "prompt": "Get all records from BOLNEY where SGT is either 'SGT1' or 'SGT2'.",
+      "expected_sql": "SELECT * FROM BOLNEY WHERE SGT IN ('SGT1', 'SGT2')",
+      "description": "WHERE with IN list filter",
+      "elapsed_seconds": 8.09,
+      "llm_generated_sql": "SELECT * FROM BOLNEY WHERE SGT IN ('SGT1', 'SGT2')",
+      "tool_error": "Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01knhwq8hmemwth6yp0k7c3xjk` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 75383, Requested 58307. Please try again in 8h5m8.159999999s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}",
+      "query_match_score": {
+        "score": 1.0,
+        "expected_normalised": "select * from bolney where sgt in ('sgt1','sgt2')",
+        "actual_normalised": "select * from bolney where sgt in ('sgt1','sgt2')",
+        "details": "Excellent match — queries are structurally identical or near-identical."
+      },
+      "result_match_score": {
+        "score": 1.0,
+        "expected_row_count": 1000,
+        "actual_row_count": 1000,
+        "matching_rows": 1000,
+        "details": "Excellent match — result sets are identical or nearly identical."
+      },
+      "overall_score": 1.0
+    },
+    {
+      "id": 12,
+      "prompt": "Show all SGT4 records where the residual is not equal to 0.",
+      "expected_sql": "SELECT * FROM SGT4 WHERE residual != 0",
+      "description": "WHERE with not-equal operator",
+      "elapsed_seconds": 7.16,
+      "llm_generated_sql": "SELECT * FROM SGT4 WHERE residual != 0;",
+      "tool_error": "Error code: 400 - {'error': {'message': 'Please reduce the length of the messages or completion.', 'type': 'invalid_request_error', 'param': 'messages'}}",
+      "query_match_score": {
+        "score": 1.0,
+        "expected_normalised": "select * from sgt4 where residual ! = 0",
+        "actual_normalised": "select * from sgt4 where residual ! = 0",
+        "details": "Excellent match — queries are structurally identical or near-identical."
+      },
+      "result_match_score": {
+        "score": 1.0,
+        "expected_row_count": 1000,
+        "actual_row_count": 1000,
+        "matching_rows": 1000,
+        "details": "Excellent match — result sets are identical or nearly identical."
+      },
+      "overall_score": 1.0
+    },
+    {
+      "id": 13,
+      "prompt": "List all SGT1 predictions sorted by prediction_index ascending and then by predicted_for_utc descending.",
+      "expected_sql": "SELECT * FROM SGT1 ORDER BY prediction_index ASC, predicted_for_utc DESC",
+      "description": "ORDER BY with multiple columns and mixed directions",
+      "elapsed_seconds": 6.82,
+      "llm_generated_sql": "SELECT * FROM SGT1 ORDER BY prediction_index ASC, predicted_for_utc DESC;",
+      "tool_error": "Error code: 400 - {'error': {'message': 'Please reduce the length of the messages or completion.', 'type': 'invalid_request_error', 'param': 'messages'}}",
+      "query_match_score": {
+        "score": 1.0,
+        "expected_normalised": "select * from sgt1 order by prediction_index asc, predicted_for_utc desc",
+        "actual_normalised": "select * from sgt1 order by prediction_index asc, predicted_for_utc desc",
+        "details": "Excellent match — queries are structurally identical or near-identical."
+      },
+      "result_match_score": {
+        "score": 1.0,
+        "expected_row_count": 1000,
+        "actual_row_count": 1000,
+        "matching_rows": 1000,
+        "details": "Excellent match — result sets are identical or nearly identical."
+      },
+      "overall_score": 1.0
+    },
+    {
+      "id": 14,
+      "prompt": "Show me SGT values from BOLNEY that have more than 100 records.",
+      "expected_sql": "SELECT SGT, COUNT(*) FROM BOLNEY GROUP BY SGT HAVING COUNT(*) > 100",
+      "description": "GROUP BY with HAVING filter on aggregation",
+      "elapsed_seconds": 5.39,
+      "llm_generated_sql": "SELECT SGT, COUNT(*) as count FROM BOLNEY GROUP BY SGT HAVING COUNT(*) > 100;",
+      "tool_error": "SQL execution failed: GET https://gipaqowldpoiimclnjwa.supabase.co/rest/v1/BOLNEY failed with 400: {\"code\":\"PGRST100\",\"details\":\"unexpected \\\"a\\\" expecting \\\",\\\"\",\"hint\":null,\"message\":\"\\\"failed to parse select parameter (SGT,COUNT(*) as count)\\\" (line 1, column 14)\"}",
+      "query_match_score": {
+        "score": 0.9684,
+        "expected_normalised": "select sgt, count ( * ) from bolney group by sgt having count ( * ) > 100",
+        "actual_normalised": "select sgt, count ( * ) as count from bolney group by sgt having count ( * ) > 100",
+        "details": "Excellent match — queries are structurally identical or near-identical."
+      },
+      "result_match_score": null,
+      "overall_score": 0.4842
+    },
+    {
+      "id": 15,
+      "prompt": "Find all BOLNEY records where ActivePower_Avg is above the average ActivePower_Avg across all records.",
+      "expected_sql": "SELECT * FROM BOLNEY WHERE ActivePower_Avg > (SELECT AVG(ActivePower_Avg) FROM BOLNEY)",
+      "description": "Subquery with scalar comparison",
+      "elapsed_seconds": 6.28,
+      "llm_generated_sql": "SELECT * FROM BOLNEY WHERE ActivePower_Avg > (SELECT AVG(ActivePower_Avg) FROM BOLNEY)",
+      "tool_error": "SQL execution failed: GET https://gipaqowldpoiimclnjwa.supabase.co/rest/v1/BOLNEY failed with 400: {\"code\":\"22P02\",\"details\":null,\"hint\":null,\"message\":\"invalid input syntax for type double precision: \\\"(SELECT AVG(ActivePower_Avg) FROM BOLNEY)\\\"\"}",
+      "query_match_score": {
+        "score": 1.0,
+        "expected_normalised": "select * from bolney where activepower_avg > ( select avg ( activepower_avg ) from bolney )",
+        "actual_normalised": "select * from bolney where activepower_avg > ( select avg ( activepower_avg ) from bolney )",
+        "details": "Excellent match — queries are structurally identical or near-identical."
+      },
+      "result_match_score": null,
+      "overall_score": 0.5
+    },
+    {
+      "id": 16,
+      "prompt": "How many unique SGT values are there in the BOLNEY table?",
+      "expected_sql": "SELECT COUNT(DISTINCT SGT) FROM BOLNEY",
+      "description": "COUNT with DISTINCT to count unique values",
+      "elapsed_seconds": 9.13,
+      "llm_generated_sql": "SELECT COUNT(DISTINCT SGT) FROM BOLNEY;",
+      "tool_error": "SQL execution failed: GET https://gipaqowldpoiimclnjwa.supabase.co/rest/v1/BOLNEY failed with 400: {\"code\":\"PGRST200\",\"details\":\"Searched for a foreign key relationship between 'BOLNEY' and 'COUNT' in the schema 'public', but no matches were found.\",\"hint\":null,\"message\":\"Could not find a relationship between 'BOLNEY' and 'COUNT' in the schema cache\"}",
+      "query_match_score": {
+        "score": 1.0,
+        "expected_normalised": "select count ( distinct sgt ) from bolney",
+        "actual_normalised": "select count ( distinct sgt ) from bolney",
+        "details": "Excellent match — queries are structurally identical or near-identical."
+      },
+      "result_match_score": null,
+      "overall_score": 0.5
+    },
+    {
+      "id": 17,
+      "prompt": "Find all records in SGT2 where the source_file starts with 'prediction'.",
+      "expected_sql": "SELECT * FROM SGT2 WHERE source_file LIKE 'prediction%'",
+      "description": "WHERE with LIKE pattern matching on text column",
+      "elapsed_seconds": 7.09,
+      "llm_generated_sql": "SELECT * FROM SGT2 WHERE source_file LIKE 'prediction%'",
+      "tool_error": "Error code: 400 - {'error': {'message': 'Please reduce the length of the messages or completion.', 'type': 'invalid_request_error', 'param': 'messages'}}",
+      "query_match_score": {
+        "score": 1.0,
+        "expected_normalised": "select * from sgt2 where source_file like'prediction%'",
+        "actual_normalised": "select * from sgt2 where source_file like'prediction%'",
+        "details": "Excellent match — queries are structurally identical or near-identical."
+      },
+      "result_match_score": {
+        "score": 1.0,
+        "expected_row_count": 1000,
+        "actual_row_count": 1000,
+        "matching_rows": 1000,
+        "details": "Excellent match — result sets are identical or nearly identical."
+      },
+      "overall_score": 1.0
+    },
+    {
+      "id": 18,
+      "prompt": "For each SGT in BOLNEY, show the count, average, min, and max of ActivePower_Avg.",
+      "expected_sql": "SELECT SGT, COUNT(*), AVG(ActivePower_Avg), MIN(ActivePower_Avg), MAX(ActivePower_Avg) FROM BOLNEY GROUP BY SGT",
+      "description": "Complex aggregation with multiple functions in GROUP BY",
+      "elapsed_seconds": 6.8,
+      "llm_generated_sql": "SELECT SGT, COUNT(*) as count, AVG(ActivePower_Avg) as average, MIN(ActivePower_Avg) as min, MAX(ActivePower_Avg) as max FROM BOLNEY GROUP BY SGT;",
+      "tool_error": "SQL execution failed: GET https://gipaqowldpoiimclnjwa.supabase.co/rest/v1/BOLNEY failed with 400: {\"code\":\"PGRST100\",\"details\":\"unexpected \\\"a\\\" expecting \\\",\\\"\",\"hint\":null,\"message\":\"\\\"failed to parse select parameter (SGT,COUNT(*) as count,AVG(ActivePower_Avg) as average,MIN(ActivePower_Avg) as min,MAX(ActivePower_Avg) as max)\\\" (line 1, column 14)\"}",
+      "query_match_score": {
+        "score": 0.8489,
+        "expected_normalised": "select sgt, count ( * ) , avg ( activepower_avg ) , min ( activepower_avg ) , max ( activepower_avg ) from bolney group by sgt",
+        "actual_normalised": "select sgt, count ( * ) as count, avg ( activepower_avg ) as average, min ( activepower_avg ) as min, max ( activepower_avg ) as max from bolney group by sgt",
+        "details": "Good match — minor differences in column order, aliasing, or formatting."
+      },
+      "result_match_score": null,
+      "overall_score": 0.4244
+    },
+    {
+      "id": 19,
+      "prompt": "Show all BOLNEY records from the last 7 days.",
+      "expected_sql": "SELECT * FROM BOLNEY WHERE Date >= NOW() - INTERVAL '7 days'",
+      "description": "Date range query with NOW() and INTERVAL",
+      "elapsed_seconds": 7.93,
+      "llm_generated_sql": "SELECT * FROM BOLNEY WHERE Date >= NOW() - INTERVAL '7 days'",
+      "tool_error": "Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01knhwq8hmemwth6yp0k7c3xjk` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 89049, Requested 58577. Please try again in 11h25m48.864s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}",
+      "query_match_score": {
+        "score": 1.0,
+        "expected_normalised": "select * from bolney where date > = now ( ) - interval'7 days'",
+        "actual_normalised": "select * from bolney where date > = now ( ) - interval'7 days'",
+        "details": "Excellent match — queries are structurally identical or near-identical."
+      },
+      "result_match_score": {
+        "score": 1.0,
+        "expected_row_count": 1000,
+        "actual_row_count": 1000,
+        "matching_rows": 1000,
+        "details": "Excellent match — result sets are identical or nearly identical."
+      },
+      "overall_score": 1.0
+    },
+    {
+      "id": 20,
+      "prompt": "Show me the 10 most recent BOLNEY records where ActivePower_Avg is greater than 0, ordered by Date descending.",
+      "expected_sql": "SELECT * FROM BOLNEY WHERE ActivePower_Avg > 0 ORDER BY Date DESC LIMIT 10",
+      "description": "Combined WHERE, ORDER BY, and LIMIT",
+      "elapsed_seconds": 5.76,
+      "llm_generated_sql": null,
+      "tool_error": null,
+      "query_match_score": null,
+      "result_match_score": {
+        "score": 0.0,
+        "expected_row_count": 10,
+        "actual_row_count": 0,
+        "matching_rows": 0,
+        "details": "Expected 10 rows but got 0 rows — no match."
+      },
+      "overall_score": 0.0
+    }
+  ]
+}
