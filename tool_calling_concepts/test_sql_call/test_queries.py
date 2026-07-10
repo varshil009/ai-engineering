@@ -13,16 +13,16 @@ TEST_QUERIES: list[dict[str, Any]] = [
     # ── 1. Simple SELECT with WHERE ──────────────────────────────────────────
     {
         "id": 1,
-        "prompt": "Show me all records from BOLNEY where the SGT is 'SGT1'.",
-        "expected_sql": "SELECT * FROM BOLNEY WHERE SGT = 'SGT1'",
-        "description": "Simple SELECT with WHERE equality filter on a text column",
+        "prompt": "Show me up to 1000 records from BOLNEY where the SGT is 'SGT1'.",
+        "expected_sql": "SELECT * FROM BOLNEY WHERE SGT = 'SGT1' LIMIT 1000",
+        "description": "Simple SELECT with WHERE equality filter on a text column, limited to 1000 rows",
     },
     # ── 2. SELECT with multiple AND conditions ──────────────────────────────
     {
         "id": 2,
-        "prompt": "Get all SGT1 predictions where the actual value is greater than 100 and the absolute percentage error is less than 5.",
-        "expected_sql": "SELECT * FROM SGT1 WHERE actual > 100 AND absolute_percentage_error < 5",
-        "description": "Multiple WHERE conditions with AND, numeric comparisons",
+        "prompt": "Get up to 1000 SGT1 predictions where the actual value is greater than 100 and the absolute percentage error is less than 5.",
+        "expected_sql": "SELECT * FROM SGT1 WHERE actual > 100 AND absolute_percentage_error < 5 LIMIT 1000",
+        "description": "Multiple WHERE conditions with AND, numeric comparisons, limited to 1000 rows",
     },
     # ── 3. COUNT with WHERE ─────────────────────────────────────────────────
     {
@@ -34,16 +34,16 @@ TEST_QUERIES: list[dict[str, Any]] = [
     # ── 4. ORDER BY with LIMIT ──────────────────────────────────────────────
     {
         "id": 4,
-        "prompt": "Show me the top 5 most recent records from the BOLNEY table based on the Date column.",
-        "expected_sql": "SELECT * FROM BOLNEY ORDER BY Date DESC LIMIT 5",
-        "description": "ORDER BY DESC with LIMIT for sorting",
+        "prompt": "Show me the top 1000 most recent records from the BOLNEY table based on the Date column.",
+        "expected_sql": "SELECT * FROM BOLNEY ORDER BY Date DESC LIMIT 1000",
+        "description": "ORDER BY DESC with LIMIT for sorting, limited to 1000 rows",
     },
     # ── 5. Column selection with WHERE ──────────────────────────────────────
     {
         "id": 5,
-        "prompt": "Get the predicted_for_utc and predicted values from SGT2 where the forecast_horizon_minutes is 60.",
-        "expected_sql": "SELECT predicted_for_utc, predicted FROM SGT2 WHERE forecast_horizon_minutes = 60",
-        "description": "Specific column selection with WHERE on numeric column",
+        "prompt": "Get up to 1000 rows with predicted_for_utc and predicted values from SGT2 where the forecast_horizon_minutes is 60.",
+        "expected_sql": "SELECT predicted_for_utc, predicted FROM SGT2 WHERE forecast_horizon_minutes = 60 LIMIT 1000",
+        "description": "Specific column selection with WHERE on numeric column, limited to 1000 rows",
     },
     # ── 6. GROUP BY with COUNT ──────────────────────────────────────────────
     {
@@ -76,30 +76,30 @@ TEST_QUERIES: list[dict[str, Any]] = [
     # ── 10. WHERE with BETWEEN ──────────────────────────────────────────────
     {
         "id": 10,
-        "prompt": "Find all BOLNEY records where ActivePower_Avg is between 50 and 200.",
-        "expected_sql": "SELECT * FROM BOLNEY WHERE ActivePower_Avg BETWEEN 50 AND 200",
-        "description": "WHERE with BETWEEN range filter",
+        "prompt": "Find up to 1000 BOLNEY records where ActivePower_Avg is between 50 and 200.",
+        "expected_sql": "SELECT * FROM BOLNEY WHERE ActivePower_Avg BETWEEN 50 AND 200 LIMIT 1000",
+        "description": "WHERE with BETWEEN range filter, limited to 1000 rows",
     },
     # ── 11. WHERE with IN clause ────────────────────────────────────────────
     {
         "id": 11,
-        "prompt": "Get all records from BOLNEY where SGT is either 'SGT1' or 'SGT2'.",
-        "expected_sql": "SELECT * FROM BOLNEY WHERE SGT IN ('SGT1', 'SGT2')",
-        "description": "WHERE with IN list filter",
+        "prompt": "Get up to 1000 records from BOLNEY where SGT is either 'SGT1' or 'SGT2'.",
+        "expected_sql": "SELECT * FROM BOLNEY WHERE SGT IN ('SGT1', 'SGT2') LIMIT 1000",
+        "description": "WHERE with IN list filter, limited to 1000 rows",
     },
     # ── 12. WHERE with NOT EQUAL ────────────────────────────────────────────
     {
         "id": 12,
-        "prompt": "Show all SGT4 records where the residual is not equal to 0.",
-        "expected_sql": "SELECT * FROM SGT4 WHERE residual != 0",
-        "description": "WHERE with not-equal operator",
+        "prompt": "Show up to 1000 SGT4 records where the residual is not equal to 0.",
+        "expected_sql": "SELECT * FROM SGT4 WHERE residual != 0 LIMIT 1000",
+        "description": "WHERE with not-equal operator, limited to 1000 rows",
     },
     # ── 13. ORDER BY with multiple columns ──────────────────────────────────
     {
         "id": 13,
-        "prompt": "List all SGT1 predictions sorted by prediction_index ascending and then by predicted_for_utc descending.",
-        "expected_sql": "SELECT * FROM SGT1 ORDER BY prediction_index ASC, predicted_for_utc DESC",
-        "description": "ORDER BY with multiple columns and mixed directions",
+        "prompt": "List up to 1000 SGT1 predictions sorted by prediction_index ascending and then by predicted_for_utc descending.",
+        "expected_sql": "SELECT * FROM SGT1 ORDER BY prediction_index ASC, predicted_for_utc DESC LIMIT 1000",
+        "description": "ORDER BY with multiple columns and mixed directions, limited to 1000 rows",
     },
     # ── 14. GROUP BY with HAVING ────────────────────────────────────────────
     {
@@ -111,9 +111,9 @@ TEST_QUERIES: list[dict[str, Any]] = [
     # ── 15. Subquery ────────────────────────────────────────────────────────
     {
         "id": 15,
-        "prompt": "Find all BOLNEY records where ActivePower_Avg is above the average ActivePower_Avg across all records.",
-        "expected_sql": "SELECT * FROM BOLNEY WHERE ActivePower_Avg > (SELECT AVG(ActivePower_Avg) FROM BOLNEY)",
-        "description": "Subquery with scalar comparison",
+        "prompt": "Find up to 1000 BOLNEY records where ActivePower_Avg is above the average ActivePower_Avg across all records.",
+        "expected_sql": "SELECT * FROM BOLNEY WHERE ActivePower_Avg > (SELECT AVG(ActivePower_Avg) FROM BOLNEY) LIMIT 1000",
+        "description": "Subquery with scalar comparison, limited to 1000 rows",
     },
     # ── 16. COUNT with DISTINCT ─────────────────────────────────────────────
     {
@@ -125,9 +125,9 @@ TEST_QUERIES: list[dict[str, Any]] = [
     # ── 17. WHERE with LIKE pattern matching ────────────────────────────────
     {
         "id": 17,
-        "prompt": "Find all records in SGT2 where the source_file starts with 'prediction'.",
-        "expected_sql": "SELECT * FROM SGT2 WHERE source_file LIKE 'prediction%'",
-        "description": "WHERE with LIKE pattern matching on text column",
+        "prompt": "Find up to 1000 records in SGT2 where the source_file starts with 'prediction'.",
+        "expected_sql": "SELECT * FROM SGT2 WHERE source_file LIKE 'prediction%' LIMIT 1000",
+        "description": "WHERE with LIKE pattern matching on text column, limited to 1000 rows",
     },
     # ── 18. Complex aggregation with multiple functions ─────────────────────
     {
@@ -139,15 +139,15 @@ TEST_QUERIES: list[dict[str, Any]] = [
     # ── 19. Date range query ────────────────────────────────────────────────
     {
         "id": 19,
-        "prompt": "Show all BOLNEY records from the last 7 days.",
-        "expected_sql": "SELECT * FROM BOLNEY WHERE Date >= NOW() - INTERVAL '7 days'",
-        "description": "Date range query with NOW() and INTERVAL",
+        "prompt": "Show up to 1000 BOLNEY records from the last 7 days.",
+        "expected_sql": "SELECT * FROM BOLNEY WHERE Date >= NOW() - INTERVAL '7 days' LIMIT 1000",
+        "description": "Date range query with NOW() and INTERVAL, limited to 1000 rows",
     },
     # ── 20. LIMIT with OFFSET-style (SELECT with WHERE, ORDER BY, LIMIT) ────
     {
         "id": 20,
-        "prompt": "Show me the 10 most recent BOLNEY records where ActivePower_Avg is greater than 0, ordered by Date descending.",
-        "expected_sql": "SELECT * FROM BOLNEY WHERE ActivePower_Avg > 0 ORDER BY Date DESC LIMIT 10",
-        "description": "Combined WHERE, ORDER BY, and LIMIT",
+        "prompt": "Show me up to 1000 recent BOLNEY records where ActivePower_Avg is greater than 0, ordered by Date descending.",
+        "expected_sql": "SELECT * FROM BOLNEY WHERE ActivePower_Avg > 0 ORDER BY Date DESC LIMIT 1000",
+        "description": "Combined WHERE, ORDER BY, and LIMIT, limited to 1000 rows",
     },
 ]

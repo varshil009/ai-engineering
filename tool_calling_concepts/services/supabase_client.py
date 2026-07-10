@@ -186,13 +186,41 @@ class SupabaseClient:
         if parsed.get("limit") is not None:
             params["limit"] = str(parsed["limit"])
         print("Supabase Client: execute_sql params:", params)
-        response = await self._client.get(url, params=params)
-        if response.status_code >= 400:
-            raise RuntimeError(
-                f"GET {url} failed with {response.status_code}: {response.text[:500]}"
-            )
 
-        data: list[dict[str, Any]] = response.json()
+        try:
+            response = await self._client.get(url, params=params)
+        except httpx.TimeoutException as exc:
+            raise RuntimeError(
+                f"Supabase API request timed out for table '{table}': {exc}"
+            ) from exc
+        except httpx.HTTPError as exc:
+            raise RuntimeError(
+                f"Supabase API request failed for table '{table}': {exc}"
+            ) from exc
+        except Exception as exc:
+            raise RuntimeError(
+                f"Unexpected error during Supabase API request for table '{table}': {exc}"
+            ) from exc
+
+        try:
+            if response.status_code >= 400:
+                raise RuntimeError(
+                    f"GET {url} failed with {response.status_code}: {response.text[:500]}"
+                )
+        except RuntimeError:
+            raise  # Re-raise our own RuntimeError
+        except Exception as exc:
+            raise RuntimeError(
+                f"Failed to check Supabase response status for table '{table}': {exc}"
+            ) from exc
+
+        try:
+            data: list[dict[str, Any]] = response.json()
+        except Exception as exc:
+            raise RuntimeError(
+                f"Failed to parse Supabase response JSON for table '{table}': {exc}"
+            ) from exc
+
         print(f"Supabase Client: execute_sql returned {len(data)} rows")
         print(f"Supabase Client: execute_sql returned table : \n{table}")
         return data

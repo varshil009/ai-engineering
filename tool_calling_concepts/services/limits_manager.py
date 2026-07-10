@@ -1,8 +1,8 @@
-"""Rate-limit and token-limit manager for Groq API.
+"""Rate-limit and token-limit manager for Groq API with model fallback.
 
 Reads/writes ``llm_limits.json`` to track:
-    - Requests per day (RPD)
-    - Tokens per day (TPD)
+    - Requests per day (RPD) and Tokens per day (TPD) per model
+    - Active model and fallback model
     - Whether more requests are allowed
 
 Also enforces a 2-second delay between requests.
@@ -10,16 +10,20 @@ Also enforces a 2-second delay between requests.
 
 import asyncio
 import json
-import os
 from datetime import date
 from pathlib import Path
 from typing import Any, Optional
 
 _LIMITS_FILE = Path(__file__).resolve().parent.parent / "llm_limits.json"
 
+_MODELS = {
+    "llama-3.3-70b-versatile": {"tpm": 12000, "tpd": 500000, "rpm": 30, "rpd": 1000},
+    "qwen/qwen3-32b": {"tpm": 6000, "tpd": 500000, "rpm": 60, "rpd": 1000},
+}
+
 
 class LimitsManager:
-    """Manages API rate limits and token budgets."""
+    """Manages API rate limits and token budgets with multi-model support."""
 
     def __init__(self) -> None:
         self._data: dict[str, Any] = self._load()
@@ -27,16 +31,48 @@ class LimitsManager:
 
     # ── Public API ──────────────────────────────────────────────────────
 
+    @property
+    def active_model(self) -> str:
+        """Get the currently active model name."""
+        return self._data.get("active_model", "llama-3.3-70b-versatile")
+
+    @active_model.setter
+    def active_model(self, model_name: str) -> None:
+        """Set the active model (e.g. on fallback)."""
+        if model_name in self._data.get("models", {}):
+            self._data["active_model"] = model_name
+            self._save()
+
+    @property
+    def fallback_model(self) -> str:
+        """Get the fallback model name."""
+        return self._data.get("fallback_model", "qwen/qwen3-32b")
+
+    def switch_to_fallback(self) -> str:
+        """Switch active model to the fallback model.
+
+        Returns:
+            The fallback model name that is now active.
+        """
+        fb = self.fallback_model
+        self.active_model = fb
+        return fb
+
     def check_limits(self) -> bool:
-        """Check whether we can make another request.
+        """Check whether we can make another request with the active model.
 
         Returns:
             True if allowed, False if limits exceeded.
         """
-        self._reset_if_new_day()
+        active = self.active_model
+        model_data = self._get_model_data(active)
+        if model_data is None:
+            return False
 
-        usage = self._data["usage"]
-        limits = self._data["limits"]
+        self._reset_if_new_day(active)
+
+        usage = model_data["usage"]
+        limits = model_data["limits"]
 
         if not usage["more_requests"]:
             return False
@@ -61,9 +97,14 @@ class LimitsManager:
                 ``{'total_tokens': 1727, ...}``. If ``None``, only the
                 request count is incremented.
         """
-        self._reset_if_new_day()
+        active = self.active_model
+        model_data = self._get_model_data(active)
+        if model_data is None:
+            return
 
-        usage = self._data["usage"]
+        self._reset_if_new_day(active)
+
+        usage = model_data["usage"]
         usage["rpd_count"] += 1
 
         if usage_dict and "total_tokens" in usage_dict:
@@ -77,17 +118,26 @@ class LimitsManager:
 
     @property
     def more_requests(self) -> bool:
-        """Whether the system can still make API requests."""
-        self._reset_if_new_day()
-        return self._data["usage"]["more_requests"]
+        """Whether the system can still make API requests using active model."""
+        active = self.active_model
+        model_data = self._get_model_data(active)
+        if model_data is None:
+            return False
+        self._reset_if_new_day(active)
+        return model_data["usage"]["more_requests"]
 
     @property
     def usage_summary(self) -> dict[str, Any]:
-        """Return a human-readable summary of current usage."""
-        self._reset_if_new_day()
-        usage = self._data["usage"]
-        limits = self._data["limits"]
+        """Return a human-readable summary of current usage for the active model."""
+        active = self.active_model
+        model_data = self._get_model_data(active)
+        if model_data is None:
+            return {"error": f"Model {active} not found"}
+        self._reset_if_new_day(active)
+        usage = model_data["usage"]
+        limits = model_data["limits"]
         return {
+            "model": active,
             "date": usage["date"],
             "requests_today": usage["rpd_count"],
             "requests_limit": limits["rpd"],
@@ -98,10 +148,18 @@ class LimitsManager:
 
     # ── Internal helpers ────────────────────────────────────────────────
 
-    def _reset_if_new_day(self) -> None:
-        """Reset counters if the date has changed."""
+    def _get_model_data(self, model_name: str) -> Optional[dict[str, Any]]:
+        """Get the model-specific data dict (limits + usage)."""
+        models = self._data.get("models", {})
+        return models.get(model_name)
+
+    def _reset_if_new_day(self, model_name: str) -> None:
+        """Reset counters if the date has changed for the given model."""
+        model_data = self._get_model_data(model_name)
+        if model_data is None:
+            return
         today = date.today().isoformat()
-        usage = self._data["usage"]
+        usage = model_data["usage"]
         if usage["date"] != today:
             usage["date"] = today
             usage["rpd_count"] = 0
@@ -129,18 +187,19 @@ class LimitsManager:
 
     @staticmethod
     def _default_data() -> dict[str, Any]:
+        models_data: dict[str, Any] = {}
+        for model_name, limits in _MODELS.items():
+            models_data[model_name] = {
+                "limits": limits,
+                "usage": {
+                    "date": "",
+                    "rpd_count": 0,
+                    "tpd_count": 0,
+                    "more_requests": True,
+                },
+            }
         return {
-            "model_name": "llama-3.3-70b-versatile",
-            "limits": {
-                "tpm": 12000,
-                "tpd": 500000,
-                "rpm": 30,
-                "rpd": 1000,
-            },
-            "usage": {
-                "date": "",
-                "rpd_count": 0,
-                "tpd_count": 0,
-                "more_requests": True,
-            },
+            "active_model": "llama-3.3-70b-versatile",
+            "fallback_model": "qwen/qwen3-32b",
+            "models": models_data,
         }

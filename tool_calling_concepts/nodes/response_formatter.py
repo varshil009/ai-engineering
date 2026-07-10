@@ -92,10 +92,16 @@ async def response_formatter_node(state: AgentState) -> dict[str, Any]:
             "_large_data_hint": (
                 f"The query returned approximately {total_words} words of data, "
                 f"which exceeds the {_RESPONSE_WORD_LIMIT} word limit. "
-                "Use the `execute_python_analysis` tool to analyse this data. "
-                "Write Python code to summarise it: count rows, get top 10, "
-                "compute basic statistics (min, max, mean). "
-                "Do NOT try to return the raw data in your response."
+                "Use the `execute_python_analysis` tool to analyse this data.\n\n"
+                "The data is a JSON array of objects (rows), where each object has "
+                "column names as keys:\n"
+                '```json\n'
+                '[\n'
+                '  {"column1": "value1", "column2": 123},\n'
+                '  {"column1": "value2", "column2": 456}\n'
+                ']\n'
+                '```\n'
+                "Write Python code to summarise it:\n"  
             ),
         }
 

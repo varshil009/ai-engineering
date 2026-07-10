@@ -1,15 +1,34 @@
 {
-  "model_name": "llama-3.3-70b-versatile",
-  "limits": {
-    "tpm": 12000,
-    "tpd": 500000,
-    "rpm": 30,
-    "rpd": 1000
-  },
-  "usage": {
-    "date": "",
-    "rpd_count": 0,
-    "tpd_count": 0,
-    "more_requests": true
+  "active_model": "qwen/qwen3-32b",
+  "fallback_model": "qwen/qwen3-32b",
+  "models": {
+    "llama-3.3-70b-versatile": {
+      "limits": {
+        "tpm": 12000,
+        "tpd": 500000,
+        "rpm": 30,
+        "rpd": 1000
+      },
+      "usage": {
+        "date": "2026-07-10",
+        "rpd_count": 0,
+        "tpd_count": 0,
+        "more_requests": true
+      }
+    },
+    "qwen/qwen3-32b": {
+      "limits": {
+        "tpm": 6000,
+        "tpd": 500000,
+        "rpm": 60,
+        "rpd": 1000
+      },
+      "usage": {
+        "date": "",
+        "rpd_count": 0,
+        "tpd_count": 0,
+        "more_requests": true
+      }
+    }
   }
 }

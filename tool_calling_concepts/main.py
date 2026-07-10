@@ -190,6 +190,9 @@ async def run_agent(
     Returns:
         The final state dict with keys: query, messages, response, error, etc.
     """
+    import sys
+    print(f"[DEBUG run_agent] Starting agent with query: {query[:80]}...", flush=True)
+    sys.stdout.flush()
     settings.validate()
 
     graph = build_agent_graph()
@@ -212,17 +215,37 @@ async def run_agent(
             final_state: AgentState = initial_state
             async for step in compiled.astream(initial_state, stream_mode="values"):
                 final_state = step
-                # After tool_executor node runs, its output is stored under the key
-                # of the node name in the state. We detect this by checking for
-                # tool_results in the state (which tool_executor populates).
+                print(f"[DEBUG run_agent] Step keys: {list(step.keys())}", flush=True)
+                sys.stdout.flush()
+                if step.get("error"):
+                    print(f"[DEBUG run_agent] State has error: {step['error']}", flush=True)
+                    sys.stdout.flush()
+                # Call intercept callback whenever we have tool_results OR an error
                 if step.get("tool_results"):
+                    print(f"[DEBUG run_agent] Calling intercept_callback (tool_results present)", flush=True)
+                    sys.stdout.flush()
                     await intercept_callback(dict(step))
+                elif step.get("error"):
+                    # Also call intercept on errors so the test framework can see them
+                    print(f"[DEBUG run_agent] Calling intercept_callback (error present)", flush=True)
+                    sys.stdout.flush()
+                    await intercept_callback(dict(step))
+            print(f"[DEBUG run_agent] Final state keys: {list(final_state.keys())}", flush=True)
+            print(f"[DEBUG run_agent] Final response: {str(final_state.get('response', ''))[:100]}", flush=True)
+            print(f"[DEBUG run_agent] Final error: {final_state.get('error', 'None')}", flush=True)
+            sys.stdout.flush()
             return dict(final_state)
         else:
             result: AgentState = await compiled.ainvoke(initial_state)
+            print(f"[DEBUG run_agent] Invoke result keys: {list(result.keys())}", flush=True)
+            print(f"[DEBUG run_agent] Invoke response: {str(result.get('response', ''))[:100]}", flush=True)
+            print(f"[DEBUG run_agent] Invoke error: {result.get('error', 'None')}", flush=True)
+            sys.stdout.flush()
             return dict(result)
     finally:
         # Clean up the persistent terminal subprocess
+        print(f"[DEBUG run_agent] Cleaning up terminal", flush=True)
+        sys.stdout.flush()
         await close_terminal()
 
 

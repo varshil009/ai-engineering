@@ -62,6 +62,22 @@ def _build_system_prompt() -> str:
         "4. The terminal runs in the project's uv environment. Standard library, json, and pandas are available.\n"
         "5. If a single response would exceed ~6000 words, use the terminal to analyse/summarise instead.\n"
         "6. You can call the terminal tool repeatedly until you have the answer you need.\n\n"
+        "## Data Format\n"
+        "SQL results are returned as a JSON array of objects, where each object represents a row "
+        "with column names as keys:\n"
+        "```json\n"
+        '[\n'
+        '  {"column1": "value1", "column2": 123, "column3": "2024-01-01T00:00:00Z"},\n'
+        '  {"column1": "value2", "column2": 456, "column3": "2024-01-02T00:00:00Z"}\n'
+        "]\n"
+        "```\n"
+        "When writing Python analysis code, parse the data with:\n"
+        "```python\n"
+        "import json\n"
+        "data = json.loads(input_json_string)\n"
+        "print(f'Total rows: {len(data)}')\n"
+        "print(json.dumps(data[:3], indent=2))  # preview first 3 rows\n"
+        "```\n\n"
         "⚠️⚠️⚠️ MOST IMPORTANT ⚠️⚠️⚠️\n"
         "If the user asks for a table that does not exist, inform them and do not attempt to call the tool.\n"
         "⚠️⚠️⚠️ ANOTHER MOST IMPORTANT ⚠️⚠️⚠️\n"
@@ -76,11 +92,16 @@ async def llm_inference_node(state: AgentState) -> dict[str, Any]:
     next node. If Groq responds directly, the response text is stored
     and the graph can end.
     """
-    client = GroqClient()
+    import sys
     query = state.get("query", "").strip()
+    print(f"[DEBUG llm_inference_node] Entered with query: {query[:50]}...", flush=True)
+    sys.stdout.flush()
 
     if not query:
+        print("[DEBUG llm_inference_node] No query provided, returning early", flush=True)
         return {"response": "No query provided.", "error": None}
+
+    client = GroqClient()
 
     # Build messages from accumulated conversation history
     messages: list[dict[str, Any]] = [
@@ -94,6 +115,14 @@ async def llm_inference_node(state: AgentState) -> dict[str, Any]:
         if msg.get("role") in ("assistant", "tool"):
             messages.append(msg)
 
+    # Also append tool_results from state as tool messages (for loop-back)
+    tool_results = state.get("tool_results", [])
+    for tr in tool_results:
+        if tr.get("role") == "tool" and tr not in messages:
+            messages.append(tr)
+
+    print(f"[DEBUG llm_inference_node] Calling Groq API with {len(messages)} messages...", flush=True)
+    sys.stdout.flush()
     try:
         result = await client.chat_completion(
             messages=messages,
@@ -101,19 +130,37 @@ async def llm_inference_node(state: AgentState) -> dict[str, Any]:
             tool_choice="auto",
         )
     except Exception as exc:
+        error_msg = f"LLM inference failed: {exc}"
+        print(f"[ERROR llm_inference_node] {error_msg}", flush=True)
+        sys.stderr.flush()
         return {
             "response": None,
-            "error": f"LLM inference failed: {exc}",
+            "error": error_msg,
         }
+    print(f"[DEBUG llm_inference_node] Groq API returned successfully", flush=True)
+    print(f"[DEBUG llm_inference_node] Result keys: {list(result.keys())}", flush=True)
+    sys.stdout.flush()
 
     # Extract the assistant message
-    choice = result["choices"][0]
-    message = choice["message"]
+    try:
+        choice = result["choices"][0]
+        message = choice["message"]
+    except (KeyError, IndexError) as exc:
+        error_msg = f"Failed to parse LLM response structure: {exc}. Result: {str(result)[:200]}"
+        print(f"[ERROR llm_inference_node] {error_msg}", flush=True)
+        sys.stderr.flush()
+        return {
+            "response": None,
+            "error": error_msg,
+        }
 
     tool_calls = message.get("tool_calls", [])
     content = message.get("content")
 
     if tool_calls:
+        tool_names = [tc.get("function", {}).get("name", "?") for tc in tool_calls]
+        print(f"[DEBUG llm_inference_node] Tool calls generated: {tool_names}", flush=True)
+        sys.stdout.flush()
         # Store tool calls for the executor node
         return {
             "messages": messages + [message],
@@ -123,6 +170,9 @@ async def llm_inference_node(state: AgentState) -> dict[str, Any]:
         }
 
     # No tool calls — LLM responded directly
+    response_preview = (content or "")[:100]
+    print(f"[DEBUG llm_inference_node] Direct response (no tool calls): {response_preview}...", flush=True)
+    sys.stdout.flush()
     return {
         "messages": messages + [message],
         "tool_calls": [],

@@ -1,21 +1,32 @@
-"""Async Groq client wrapper for chat completions with tool calling."""
+"""Async Groq client wrapper for chat completions with tool calling and model fallback.
 
+On HTTP 429 (rate limit) errors, automatically falls back to the backup model
+defined in ``llm_limits.json``.
+"""
+
+import sys
 from typing import Any
 
 from groq import AsyncGroq
+from groq import (
+    RateLimitError as GroqRateLimitError,
+)
 
 from tool_calling_concepts.config import settings
 from tool_calling_concepts.services.limits_manager import LimitsManager
 
 
 class GroqClient:
-    """Async wrapper around the Groq SDK for chat completions."""
+    """Async wrapper around the Groq SDK for chat completions with fallback."""
 
     def __init__(self) -> None:
         self._client = AsyncGroq(api_key=settings.groq_api_key)
-        self._model: str = settings.groq_model
         self._limits = LimitsManager()
 
+    @property
+    def active_model(self) -> str:
+        """Get the currently active model from the limits manager."""
+        return self._limits.active_model
 
     async def chat_completion(
         self,
@@ -26,6 +37,9 @@ class GroqClient:
         max_tokens: int = 8192,
     ) -> dict[str, Any]:
         """Send a chat completion request with optional tool calling.
+
+        On HTTP 429 (rate limit), automatically falls back to the backup model
+        and retries once.
 
         Args:
             messages: The conversation messages (system, user, assistant, tool).
@@ -38,19 +52,20 @@ class GroqClient:
             The full response dict from Groq.
 
         Raises:
-            RuntimeError: If API rate/token limits have been exceeded.
+            RuntimeError: If API rate/token limits have been exceeded or request fails.
         """
         # Check limits before making the request
         if not self._limits.check_limits():
             summary = self._limits.usage_summary
             raise RuntimeError(
-                f"API limits exceeded. "
+                f"API limits exceeded for model '{summary['model']}'. "
                 f"Requests today: {summary['requests_today']}/{summary['requests_limit']}. "
                 f"Tokens today: {summary['tokens_today']}/{summary['tokens_limit']}."
             )
 
+        model = self.active_model
         kwargs: dict[str, Any] = {
-            "model": self._model,
+            "model": model,
             "messages": messages,
             "temperature": temperature,
             "max_tokens": max_tokens,
@@ -59,14 +74,55 @@ class GroqClient:
             kwargs["tools"] = tools
             kwargs["tool_choice"] = tool_choice
 
-        response = await self._client.chat.completions.create(**kwargs)
-        result = response.model_dump(mode="json")
+        # Attempt the request (with one fallback retry on 429)
+        for attempt in range(2):
+            try:
+                response = await self._client.chat.completions.create(**kwargs)
+                break  # Success — exit retry loop
+            except GroqRateLimitError as exc:
+                if attempt == 0:
+                    # First failure — try fallback model
+                    fallback_model = self._limits.switch_to_fallback()
+                    print(
+                        f"[WARN] Rate limited on '{model}'. "
+                        f"Falling back to '{fallback_model}'.",
+                        flush=True,
+                    )
+                    sys.stdout.flush()
+                    kwargs["model"] = fallback_model
+                    continue
+                # Second failure — give up
+                raise RuntimeError(
+                    f"Groq API rate limited on both primary and fallback models: {exc}"
+                ) from exc
+            except Exception as exc:
+                raise RuntimeError(
+                    f"Groq API request failed on model '{model}': {exc}"
+                ) from exc
+        else:
+            # Loop exhausted without break — both attempts failed
+            raise RuntimeError(
+                f"Groq API request failed after retrying fallback model."
+            )
+
+        try:
+            result = response.model_dump(mode="json")
+        except Exception as exc:
+            raise RuntimeError(
+                f"Failed to parse Groq API response: {exc}"
+            ) from exc
 
         # Record usage from the response
-        usage = result.get("usage")
-        self._limits.record_request(usage)
+        try:
+            usage = result.get("usage")
+            self._limits.record_request(usage)
+        except Exception as exc:
+            print(f"Warning: Failed to record API usage: {exc}", flush=True)
 
         # Enforce 2-second delay between requests
-        await self._limits.delay()
+        try:
+            await self._limits.delay()
+        except Exception as exc:
+            print(f"Warning: Rate limiter delay failed: {exc}", flush=True)
 
         return result
