@@ -5,6 +5,7 @@ from typing import Any
 from groq import AsyncGroq
 
 from tool_calling_concepts.config import settings
+from tool_calling_concepts.services.limits_manager import LimitsManager
 
 
 class GroqClient:
@@ -13,6 +14,7 @@ class GroqClient:
     def __init__(self) -> None:
         self._client = AsyncGroq(api_key=settings.groq_api_key)
         self._model: str = settings.groq_model
+        self._limits = LimitsManager()
 
 
     async def chat_completion(
@@ -21,7 +23,7 @@ class GroqClient:
         tools: list[dict[str, Any]] | None = None,
         tool_choice: str | dict[str, Any] = "auto",
         temperature: float = 0.1,
-        max_tokens: int = 4096,
+        max_tokens: int = 8192,
     ) -> dict[str, Any]:
         """Send a chat completion request with optional tool calling.
 
@@ -34,19 +36,37 @@ class GroqClient:
 
         Returns:
             The full response dict from Groq.
+
+        Raises:
+            RuntimeError: If API rate/token limits have been exceeded.
         """
+        # Check limits before making the request
+        if not self._limits.check_limits():
+            summary = self._limits.usage_summary
+            raise RuntimeError(
+                f"API limits exceeded. "
+                f"Requests today: {summary['requests_today']}/{summary['requests_limit']}. "
+                f"Tokens today: {summary['tokens_today']}/{summary['tokens_limit']}."
+            )
+
         kwargs: dict[str, Any] = {
             "model": self._model,
             "messages": messages,
             "temperature": temperature,
             "max_tokens": max_tokens,
         }
-        #print(kwargs)
         if tools:
             kwargs["tools"] = tools
             kwargs["tool_choice"] = tool_choice
 
         response = await self._client.chat.completions.create(**kwargs)
-        print(response)
-        # Convert to a plain dict for easy serialisation
-        return response.model_dump(mode="json")
+        result = response.model_dump(mode="json")
+
+        # Record usage from the response
+        usage = result.get("usage")
+        self._limits.record_request(usage)
+
+        # Enforce 2-second delay between requests
+        await self._limits.delay()
+
+        return result

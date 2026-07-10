@@ -1,4 +1,8 @@
-"""Response Formatter Node — takes tool results and generates a natural-language answer."""
+"""Response Formatter Node — takes tool results and generates a natural-language answer.
+
+If the accumulated response would be too large (~6000 words), it returns a signal
+telling the LLM to use the terminal tool for analysis instead.
+"""
 
 import json
 from typing import Any
@@ -6,12 +10,24 @@ from typing import Any
 from tool_calling_concepts.models.schemas import AgentState
 from tool_calling_concepts.services.groq_client import GroqClient
 
+# If the combined messages exceed this word count, we'll force terminal analysis
+_RESPONSE_WORD_LIMIT = 6000
+
+
+def _estimate_word_count(data: list[dict[str, Any]]) -> int:
+    """Estimate the word count of serialised data."""
+    text = json.dumps(data, default=str)
+    return len(text.split())
+
 
 async def response_formatter_node(state: AgentState) -> dict[str, Any]:
     """LangGraph node: synthesises a final answer from tool results.
 
     Sends the original query, the SQL that was run, and the query results
     back to the LLM to generate a concise, natural-language response.
+
+    If the data is too large, it injects a system instruction telling the
+    LLM to use the terminal analysis tool instead of returning raw data.
 
     Args:
         state: The current agent state with ``tool_results`` populated.
@@ -60,19 +76,32 @@ async def response_formatter_node(state: AgentState) -> dict[str, Any]:
             "error": state["error"],
         }
 
+    # Check if the data is too large — if so, signal back to loop with terminal
+    total_words = sum(
+        _estimate_word_count(rs.get("data", []))
+        for rs in results_summary
+    )
+
+    if total_words > _RESPONSE_WORD_LIMIT:
+        # Data is too large — return a special response that tells the LLM
+        # to use the terminal analysis tool
+        return {
+            "response": None,
+            "error": None,
+            "_large_data": True,
+            "_large_data_hint": (
+                f"The query returned approximately {total_words} words of data, "
+                f"which exceeds the {_RESPONSE_WORD_LIMIT} word limit. "
+                "Use the `execute_python_analysis` tool to analyse this data. "
+                "Write Python code to summarise it: count rows, get top 10, "
+                "compute basic statistics (min, max, mean). "
+                "Do NOT try to return the raw data in your response."
+            ),
+        }
+
+    # Data is small enough — proceed with normal response formatting
     system_prompt = (
-        "You are a database assistant. Your role is to take SQL query results "
-        "and explain them in clear, natural language for the user. "
-        "Provide relevant numbers, trends, and insights. Be concise but thorough. "
-        "If the data contains timestamps, express them in a human-readable format. "
-        "Do NOT fabricate data — only report what the query returned."
-        "⚠️⚠️⚠️important :"
-        "If table contains more than 10 rows, only show the first 10 rows in markdown format, strictly show them and indicate that there are more rows."
-        "If the table doesnt exist, do not use tool call, simply inform user that the table does not exist."
-        "✅✅✅ SO YOUR RESPONSE FORMAT BECOMES :"
-        "1. Start with a brief summary of the results (e.g., number of rows, key findings).\n"
-        "2. Follow with a markdown table of the data, showing only the first 10 rows if there are more."
-        "3. End with any additional insights or recommendations based on the data."
+        "Generate a 2 line summary from data returned from the database query and format it into a markdown format."
     )
 
     llm_messages: list[dict[str, Any]] = [{"role": "system", "content": system_prompt}]
@@ -95,8 +124,24 @@ async def response_formatter_node(state: AgentState) -> dict[str, Any]:
             max_tokens=2048,
         )
         response_text: str = result["choices"][0]["message"].get("content", "")
+        final_response = response_text or "I was unable to generate a response from the data."
+
+        # Check if the response itself is too large
+        if len(final_response.split()) > _RESPONSE_WORD_LIMIT:
+            return {
+                "response": None,
+                "error": None,
+                "_large_data": True,
+                "_large_data_hint": (
+                    f"The generated response is approximately {len(final_response.split())} words, "
+                    f"which exceeds the {_RESPONSE_WORD_LIMIT} word limit. "
+                    "Use the `execute_python_analysis` tool to analyse the data instead. "
+                    "Write Python code to compute a concise summary."
+                ),
+            }
+
         return {
-            "response": response_text or "I was unable to generate a response from the data.",
+            "response": final_response,
             "error": None,
         }
     except Exception as exc:

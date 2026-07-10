@@ -1,0 +1,15 @@
+{
+  "model_name": "llama-3.3-70b-versatile",
+  "limits": {
+    "tpm": 12000,
+    "tpd": 500000,
+    "rpm": 30,
+    "rpd": 1000
+  },
+  "usage": {
+    "date": "",
+    "rpd_count": 0,
+    "tpd_count": 0,
+    "more_requests": true
+  }
+}

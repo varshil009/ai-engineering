@@ -38,3 +38,41 @@ def get_execute_supabase_query_tool() -> dict[str, Any]:
             "strict": True,
         },
     }
+
+
+def get_terminal_tool() -> dict[str, Any]:
+    """Return the tool definition for executing Python analysis code.
+
+    This is passed to Groq as part of the `tools` parameter so the
+    model knows it can call this function after SQL results are returned.
+    """
+    return {
+        "type": "function",
+        "function": {
+            "name": "execute_python_analysis",
+            "description": (
+                "Execute Python code to analyse or summarise data returned from SQL queries. "
+                "Use this when SQL results are too large to display directly. "
+                "The code runs in a persistent Python terminal using the project's uv environment. "
+                "Standard library, json, and pandas are available. "
+                "Do NOT use for: installing packages, navigating directories, exploring the filesystem, "
+                "or importing unexpected modules."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "code": {
+                        "type": "string",
+                        "description": (
+                            "The Python code to execute. Use print() for output. "
+                            "Data is passed as a Python list of dicts via stdin. "
+                            "Example: data = json.loads(sys.stdin.read()); print(len(data))"
+                        ),
+                    },
+                },
+                "required": ["code"],
+                "additionalProperties": False,
+            },
+            "strict": True,
+        },
+    }
