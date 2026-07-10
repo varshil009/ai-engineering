@@ -1,9 +1,12 @@
 """Async Groq client wrapper for chat completions with tool calling and model fallback.
 
 On HTTP 429 (rate limit) errors, automatically falls back to the backup model
-defined in ``llm_limits.json``.
+defined in llm_limits.json.
+
+Also strips think blocks from Qwen model responses.
 """
 
+import re
 import sys
 from typing import Any
 
@@ -14,6 +17,14 @@ from groq import (
 
 from tool_calling_concepts.config import settings
 from tool_calling_concepts.services.limits_manager import LimitsManager
+
+# Regex to strip think blocks (Qwen models wrap reasoning in think tags)
+_THINK_PATTERN = re.compile(r"", re.DOTALL)
+
+
+def _strip_think_tags(text: str) -> str:
+    """Remove think blocks from a string."""
+    return _THINK_PATTERN.sub("", text).strip()
 
 
 class GroqClient:
@@ -40,6 +51,9 @@ class GroqClient:
 
         On HTTP 429 (rate limit), automatically falls back to the backup model
         and retries once.
+
+        For Qwen models, strips think blocks from the response content
+        and tool call arguments.
 
         Args:
             messages: The conversation messages (system, user, assistant, tool).
@@ -74,14 +88,17 @@ class GroqClient:
             kwargs["tools"] = tools
             kwargs["tool_choice"] = tool_choice
 
+        # Track whether we are using a Qwen model (needs think-tag stripping)
+        is_qwen = "qwen" in model.lower()
+
         # Attempt the request (with one fallback retry on 429)
         for attempt in range(2):
             try:
                 response = await self._client.chat.completions.create(**kwargs)
-                break  # Success — exit retry loop
+                break  # Success - exit retry loop
             except GroqRateLimitError as exc:
                 if attempt == 0:
-                    # First failure — try fallback model
+                    # First failure - try fallback model
                     fallback_model = self._limits.switch_to_fallback()
                     print(
                         f"[WARN] Rate limited on '{model}'. "
@@ -90,8 +107,9 @@ class GroqClient:
                     )
                     sys.stdout.flush()
                     kwargs["model"] = fallback_model
+                    is_qwen = "qwen" in fallback_model.lower()
                     continue
-                # Second failure — give up
+                # Second failure - give up
                 raise RuntimeError(
                     f"Groq API rate limited on both primary and fallback models: {exc}"
                 ) from exc
@@ -100,7 +118,7 @@ class GroqClient:
                     f"Groq API request failed on model '{model}': {exc}"
                 ) from exc
         else:
-            # Loop exhausted without break — both attempts failed
+            # Loop exhausted without break - both attempts failed
             raise RuntimeError(
                 f"Groq API request failed after retrying fallback model."
             )
@@ -111,6 +129,28 @@ class GroqClient:
             raise RuntimeError(
                 f"Failed to parse Groq API response: {exc}"
             ) from exc
+
+        # Strip think blocks if using Qwen model
+        if is_qwen:
+            try:
+                choice = result["choices"][0]
+                message = choice.get("message", {})
+
+                # Clean content
+                content = message.get("content", "")
+                if content:
+                    message["content"] = _strip_think_tags(content)
+
+                # Clean tool call arguments
+                tool_calls = message.get("tool_calls", [])
+                for tc in tool_calls:
+                    fn_info = tc.get("function", {})
+                    arguments = fn_info.get("arguments", "")
+                    if arguments:
+                        fn_info["arguments"] = _strip_think_tags(arguments)
+
+            except (KeyError, IndexError, TypeError):
+                pass  # Malformed response - return as-is
 
         # Record usage from the response
         try:
