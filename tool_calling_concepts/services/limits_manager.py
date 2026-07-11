@@ -17,9 +17,17 @@ from typing import Any, Optional
 _LIMITS_FILE = Path(__file__).resolve().parent.parent / "llm_limits.json"
 
 _MODELS = {
-    "llama-3.3-70b-versatile": {"tpm": 12000, "tpd": 500000, "rpm": 30, "rpd": 1000},
-    "qwen/qwen3-32b": {"tpm": 6000, "tpd": 500000, "rpm": 60, "rpd": 1000},
+    "llama-3.3-70b-versatile": {"tpm": 12000, "tpd": 100000, "rpm": 30, "rpd": 1000},
+    "meta-llama/llama-4-scout-17b-16e-instruct": {"tpm": 30000, "tpd": 100000, "rpm": 30, "rpd": 1000},
+    "qwen/qwen3-32b": {"tpm": 6000, "tpd": 100000, "rpm": 60, "rpd": 1000},
 }
+
+# Priority order for day-change reset
+_PRIORITY_ORDER = [
+    "llama-3.3-70b-versatile",
+    "meta-llama/llama-4-scout-17b-16e-instruct",
+    "qwen/qwen3-32b",
+]
 
 
 class LimitsManager:
@@ -49,11 +57,28 @@ class LimitsManager:
         return self._data.get("fallback_model", "qwen/qwen3-32b")
 
     def switch_to_fallback(self) -> str:
-        """Switch active model to the fallback model.
+        """Switch active model to the next available model in priority order.
+
+        Tries models in priority order: llama-3.3-70b-versatile (if not current),
+        meta-llama/llama-4-scout-17b-16e-instruct, qwen/qwen3-32b.
 
         Returns:
             The fallback model name that is now active.
         """
+        current = self.active_model
+        for model_name in _PRIORITY_ORDER:
+            if model_name == current:
+                continue
+            model_data = self._get_model_data(model_name)
+            if model_data is None:
+                continue
+            # Check if this model has quota left
+            usage = model_data["usage"]
+            limits = model_data["limits"]
+            if usage["rpd_count"] < limits["rpd"] and usage["tpd_count"] < limits["tpd"]:
+                self.active_model = model_name
+                return model_name
+        # Fallback to the configured fallback model even if exhausted
         fb = self.fallback_model
         self.active_model = fb
         return fb
@@ -154,7 +179,12 @@ class LimitsManager:
         return models.get(model_name)
 
     def _reset_if_new_day(self, model_name: str) -> None:
-        """Reset counters if the date has changed for the given model."""
+        """Reset counters if the date has changed for the given model.
+
+        Also resets the active model back to the highest-priority model
+        (llama-3.3-70b-versatile) so we always start a new day with the
+        primary model.
+        """
         model_data = self._get_model_data(model_name)
         if model_data is None:
             return
@@ -165,6 +195,10 @@ class LimitsManager:
             usage["rpd_count"] = 0
             usage["tpd_count"] = 0
             usage["more_requests"] = True
+            # Reset active model to the highest-priority model on day change
+            primary = _PRIORITY_ORDER[0]
+            if self.active_model != primary:
+                self.active_model = primary
             self._save()
 
     def _load(self) -> dict[str, Any]:

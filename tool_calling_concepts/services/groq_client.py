@@ -98,7 +98,6 @@ class GroqClient:
                 break  # Success - exit retry loop
             except GroqRateLimitError as exc:
                 if attempt == 0:
-                    # First failure - try fallback model
                     fallback_model = self._limits.switch_to_fallback()
                     print(
                         f"[WARN] Rate limited on '{model}'. "
@@ -109,16 +108,27 @@ class GroqClient:
                     kwargs["model"] = fallback_model
                     is_qwen = "qwen" in fallback_model.lower()
                     continue
-                # Second failure - give up
                 raise RuntimeError(
                     f"Groq API rate limited on both primary and fallback models: {exc}"
                 ) from exc
             except Exception as exc:
+                # Check if this is a 429 rate limit error (Groq SDK may raise it as generic)
+                exc_str = str(exc)
+                if attempt == 0 and ("429" in exc_str or "rate_limit" in exc_str.lower() or "Rate limit" in exc_str):
+                    fallback_model = self._limits.switch_to_fallback()
+                    print(
+                        f"[WARN] Rate limited on '{model}'. "
+                        f"Falling back to '{fallback_model}'.",
+                        flush=True,
+                    )
+                    sys.stdout.flush()
+                    kwargs["model"] = fallback_model
+                    is_qwen = "qwen" in fallback_model.lower()
+                    continue
                 raise RuntimeError(
                     f"Groq API request failed on model '{model}': {exc}"
                 ) from exc
         else:
-            # Loop exhausted without break - both attempts failed
             raise RuntimeError(
                 f"Groq API request failed after retrying fallback model."
             )

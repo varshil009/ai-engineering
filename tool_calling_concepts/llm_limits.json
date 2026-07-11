@@ -1,16 +1,30 @@
 {
-  "active_model": "qwen/qwen3-32b",
-  "fallback_model": "qwen/qwen3-32b",
+  "active_model": "llama-3.3-70b-versatile",
+  "fallback_model": "meta-llama/llama-4-scout-17b-16e-instruct",
   "models": {
     "llama-3.3-70b-versatile": {
       "limits": {
         "tpm": 12000,
-        "tpd": 500000,
+        "tpd": 100000,
         "rpm": 30,
         "rpd": 1000
       },
       "usage": {
-        "date": "2026-07-10",
+        "date": "2026-07-11",
+        "rpd_count": 1,
+        "tpd_count": 1216,
+        "more_requests": true
+      }
+    },
+    "meta-llama/llama-4-scout-17b-16e-instruct": {
+      "limits": {
+        "tpm": 30000,
+        "tpd": 100000,
+        "rpm": 30,
+        "rpd": 1000
+      },
+      "usage": {
+        "date": "",
         "rpd_count": 0,
         "tpd_count": 0,
         "more_requests": true
@@ -19,7 +33,7 @@
     "qwen/qwen3-32b": {
       "limits": {
         "tpm": 6000,
-        "tpd": 500000,
+        "tpd": 100000,
         "rpm": 60,
         "rpd": 1000
       },
