@@ -72,10 +72,22 @@ async def tool_executor_node(state: AgentState) -> dict[str, Any]:
         # Execute SQL
         try:
             rows = await run_sql_query(sql_query)
+            # Truncate large results to avoid exceeding Groq's message size limit
+            # Show first 20 rows + summary for large datasets
+            max_preview_rows = 20
+            if len(rows) > max_preview_rows:
+                preview = rows[:max_preview_rows]
+                content = json.dumps({
+                    "total_rows": len(rows),
+                    "preview": preview,
+                    "note": f"Showing first {max_preview_rows} of {len(rows)} rows. Use execute_python_analysis to analyse the full dataset."
+                }, indent=2, default=str)
+            else:
+                content = json.dumps(rows, indent=2, default=str)
             tool_results.append({
                 "role": "tool",
                 "tool_call_id": tool_call_id,
-                "content": json.dumps(rows, indent=2, default=str),
+                "content": content,
                 "sql_query": sql_query,
                 "row_count": len(rows),
             })

@@ -6,7 +6,6 @@ Decides whether to:
 3. Respond directly to the user (sets ``response`` and ends the graph).
 """
 
-import json
 from typing import Any
 
 from tool_calling_concepts.config import TABLE_SCHEMAS
@@ -69,15 +68,25 @@ async def llm_inference_node(state: AgentState) -> dict[str, Any]:
     existing_messages = state.get("messages", [])
     for msg in existing_messages:
         if msg.get("role") in ("assistant", "tool"):
-            # Strip unsupported fields (e.g. 'annotations') that Groq's API rejects
-            clean_msg = {k: v for k, v in msg.items() if k != "annotations"}
+            # Strip unsupported fields that Groq's API rejects
+            # Standard OpenAI fields for assistant: role, content, tool_calls, name, refusal
+            # Standard OpenAI fields for tool: role, tool_call_id, content
+            # Groq rejects: annotations, executed_tools, function_call (when null), and other custom fields
+            _unsupported = {"annotations", "executed_tools", "sql_query", "row_count", "terminal_output"}
+            clean_msg = {k: v for k, v in msg.items() if k not in _unsupported}
+            # Also remove function_call if it's None (Groq rejects null function_call)
+            if clean_msg.get("function_call") is None:
+                clean_msg.pop("function_call", None)
             messages.append(clean_msg)
 
     # Also append tool_results from state as tool messages (for loop-back)
     tool_results = state.get("tool_results", [])
     for tr in tool_results:
         if tr.get("role") == "tool" and tr not in messages:
-            messages.append(tr)
+            # Strip unsupported fields from tool messages too
+            _unsupported = {"annotations", "executed_tools", "sql_query", "row_count", "terminal_output"}
+            clean_tr = {k: v for k, v in tr.items() if k not in _unsupported}
+            messages.append(clean_tr)
 
     print(f"[DEBUG llm_inference_node] Calling Groq API with {len(messages)} messages...", flush=True)
     sys.stdout.flush()

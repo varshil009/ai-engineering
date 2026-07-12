@@ -162,9 +162,9 @@ class SupabaseClient:
             )
 
         parsed = _parse_select(sql_query)
-        print("Supabase Client _parse_select:", parsed)
+        #print("Supabase Client _parse_select:", parsed)
         table = parsed["table"]
-        print("Supabase Client: parsed['table']:", table)
+        #print("Supabase Client: parsed['table']:", table)
         if not table:
             raise ValueError(f"Could not parse table from: {sql_query!r}")
 
@@ -222,7 +222,7 @@ class SupabaseClient:
             ) from exc
 
         print(f"Supabase Client: execute_sql returned {len(data)} rows")
-        print(f"Supabase Client: execute_sql returned table : \n{table}")
+        #print(f"Supabase Client: execute_sql returned table : \n{table}")
         return data
 
 async def run_sql_query(sql_query: str) -> list[dict[str, Any]]:
