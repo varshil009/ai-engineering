@@ -1,4 +1,4 @@
 @echo off
-cd /d d:\AI Agents\learn
-set PYTHONPATH=ai-engineering
-uv run python ai-engineering\tool_calling_concepts\test_fix.py
+cd /d d:\AI Agents\learn\ai-engineering\tool_calling_concepts
+set PYTHONPATH=d:\AI Agents\learn\ai-engineering
+..\..\.venv\Scripts\python.exe test_fix.py

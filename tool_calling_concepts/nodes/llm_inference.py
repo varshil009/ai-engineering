@@ -6,6 +6,7 @@ Decides whether to:
 3. Respond directly to the user (sets ``response`` and ends the graph).
 """
 
+import json
 from typing import Any
 
 from tool_calling_concepts.config import TABLE_SCHEMAS
@@ -86,6 +87,26 @@ async def llm_inference_node(state: AgentState) -> dict[str, Any]:
             # Strip unsupported fields from tool messages too
             _unsupported = {"annotations", "executed_tools", "sql_query", "row_count", "terminal_output"}
             clean_tr = {k: v for k, v in tr.items() if k not in _unsupported}
+            # Truncate large tool result content to avoid exceeding Groq's message size limit.
+            # Keep full data in state for terminal executor and response formatter.
+            content = clean_tr.get("content", "")
+            if content and len(content) > 5000:
+                try:
+                    data = json.loads(content)
+                    if isinstance(data, list) and len(data) > 10:
+                        preview = data[:10]
+                        clean_tr["content"] = json.dumps({
+                            "total_rows": len(data),
+                            "preview": preview,
+                            "note": (
+                                f"Showing first 10 of {len(data)} rows. "
+                                "The full dataset is available. "
+                                "If you need to analyse or summarise this data, "
+                                "use the `execute_python_analysis` tool."
+                            ),
+                        }, indent=2, default=str)
+                except (json.JSONDecodeError, TypeError):
+                    pass  # Not JSON data, keep as-is
             messages.append(clean_tr)
 
     print(f"[DEBUG llm_inference_node] Calling Groq API with {len(messages)} messages...", flush=True)
