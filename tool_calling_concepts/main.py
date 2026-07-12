@@ -283,6 +283,7 @@ def main() -> None:
 
     # Show tool results summary
     tool_results = result.get("tool_results", [])
+    print(f"\n🛠️  Tool Results: {tool_results} entries")
     for tr in tool_results:
         sql = tr.get("sql_query")
         row_count = tr.get("row_count")

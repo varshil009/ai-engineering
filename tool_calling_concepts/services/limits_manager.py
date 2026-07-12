@@ -38,7 +38,6 @@ class LimitsManager:
         self._last_request_time: float = 0.0
 
     # ── Public API ──────────────────────────────────────────────────────
-
     @property
     def active_model(self) -> str:
         """Get the currently active model name."""
@@ -57,7 +56,8 @@ class LimitsManager:
         return self._data.get("fallback_model", "qwen/qwen3-32b")
 
     def switch_to_fallback(self) -> str:
-        """Switch active model to the next available model in priority order.
+        """
+        Switch active model to the next available model in priority order.
 
         Tries models in priority order: llama-3.3-70b-versatile (if not current),
         meta-llama/llama-4-scout-17b-16e-instruct, qwen/qwen3-32b.

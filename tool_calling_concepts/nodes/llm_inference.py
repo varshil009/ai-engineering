@@ -69,7 +69,9 @@ async def llm_inference_node(state: AgentState) -> dict[str, Any]:
     existing_messages = state.get("messages", [])
     for msg in existing_messages:
         if msg.get("role") in ("assistant", "tool"):
-            messages.append(msg)
+            # Strip unsupported fields (e.g. 'annotations') that Groq's API rejects
+            clean_msg = {k: v for k, v in msg.items() if k != "annotations"}
+            messages.append(clean_msg)
 
     # Also append tool_results from state as tool messages (for loop-back)
     tool_results = state.get("tool_results", [])
@@ -92,6 +94,7 @@ async def llm_inference_node(state: AgentState) -> dict[str, Any]:
         return {
             "response": None,
             "error": error_msg,
+            "tool_calls": [],  # Clear tool_calls to prevent infinite loop back to executor
         }
     print(f"[DEBUG llm_inference_node] Groq API returned successfully", flush=True)
     print(f"[DEBUG llm_inference_node] Result keys: {list(result.keys())}", flush=True)

@@ -135,6 +135,15 @@ class GroqClient:
 
         try:
             result = response.model_dump(mode="json")
+            # Strip 'annotations' field from assistant messages in the result,
+            # as Groq's API rejects this field when re-sent in subsequent requests.
+            try:
+                choice = result["choices"][0]
+                message = choice.get("message", {})
+                if "annotations" in message:
+                    del message["annotations"]
+            except (KeyError, IndexError, TypeError):
+                pass  # Malformed response — proceed without stripping
         except Exception as exc:
             raise RuntimeError(
                 f"Failed to parse Groq API response: {exc}"
